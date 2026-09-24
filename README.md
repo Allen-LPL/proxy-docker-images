@@ -1,5 +1,7 @@
 # proxy-docker-images
 
+**Language:** English · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
+
 Parameterized, reusable Docker images for an Xray-based proxy service chain.
 One digest-pinned Xray core is wrapped per role; each node is brought up by
 filling a short `.env` and running `docker compose up`. **No secrets ever live
