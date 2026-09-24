@@ -4,7 +4,7 @@
 # VM, HK and MS host, so it is bit-identical to production. The final image
 # carries only a role template + required-vars list + entrypoint; no secrets.
 #
-#   docker build --build-arg ROLE=<role> -t liupengliang/infra:<role> docker/
+#   docker build --build-arg ROLE=<role> -t youruser/infra:<role> docker/
 #
 # Roles: client-legacy client server-legacy server-exit server-gate
 

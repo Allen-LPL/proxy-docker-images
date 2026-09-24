@@ -7,7 +7,7 @@
 # keeps the gate off any public interface, matching the live HK topology.
 services:
   xray:
-    image: liupengliang/infra:server-gate
+    image: ${IMAGE_REPO:-youruser/infra}:server-gate
     container_name: hkgate-xray
     restart: unless-stopped
     user: "0"

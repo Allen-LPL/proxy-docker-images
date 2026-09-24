@@ -3,7 +3,7 @@
 #   docker compose up -d
 services:
   xray:
-    image: liupengliang/infra:server-exit
+    image: ${IMAGE_REPO:-youruser/infra}:server-exit
     container_name: xray-ai
     restart: unless-stopped
     user: "0"

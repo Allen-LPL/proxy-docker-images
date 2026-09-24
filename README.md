@@ -40,6 +40,13 @@ edge cases.
 
 ## Quick start
 
+**Image namespace.** The images aren't hardcoded to any registry. Two knobs, set
+them to the same value (your registry namespace, e.g. `youruser/infra`):
+
+- `REPO` — env var read by `scripts/build-images` when building/pushing.
+- `IMAGE_REPO` — set in each node's `.env`; the compose files read it (default
+  `youruser/infra`). This is what a node pulls at `docker compose up`.
+
 ### Build & publish (maintainer)
 
 ```sh
@@ -58,6 +65,7 @@ unset, it defaults to the mirror digest in `docker/Dockerfile`.
 ```sh
 cd deploy/<role>/
 cp ../../docker/env/<role>.env.example .env    # then fill in real values
+# set IMAGE_REPO in .env to your namespace (e.g. youruser/infra)
 docker compose up -d
 ```
 
@@ -69,12 +77,12 @@ and sends everything else to a decoy upstream. See
 
 ## Configuration reference
 
-Each role's variables are documented in `docker/env/<role>.env.example`. Copy it
-to `.env`, fill every `REPLACE_ME`, and keep the result **out of git** (`.env`
-is gitignored). Generate a REALITY keypair with:
+Each role's variables are documented in `docker/env/<role>.env.example` —
+including `IMAGE_REPO`. Copy it to `.env`, fill every `REPLACE_ME`, and keep the
+result **out of git** (`.env` is gitignored). Generate a REALITY keypair with:
 
 ```sh
-docker run --rm --entrypoint xray <youruser>/infra:server-exit x25519
+docker run --rm --entrypoint xray youruser/infra:server-exit x25519
 ```
 
 ## Security & caveats

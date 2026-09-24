@@ -3,7 +3,7 @@
 #   docker compose up -d
 services:
   xray:
-    image: liupengliang/infra:client
+    image: ${IMAGE_REPO:-youruser/infra}:client
     container_name: vm-dev-xray
     restart: unless-stopped
     user: "0"

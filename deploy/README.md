@@ -27,11 +27,14 @@ push, so a broken template never reaches the registry.
 ```sh
 cd deploy/<role>/
 cp ../../docker/env/<role>.env.example .env    # then fill in real values
+# in .env, set IMAGE_REPO to your registry namespace (e.g. youruser/infra)
 docker compose up -d
 ```
 
-The container renders `.env` into the config, runs `xray run -test`, and only
-starts if the config is valid. A missing variable aborts with a clear message.
+The compose files pull `${IMAGE_REPO}:<role>` (default `youruser/infra`), so
+`IMAGE_REPO` in `.env` decides which registry the node pulls from. The container
+then renders `.env` into the config, runs `xray run -test`, and only starts if
+the config is valid. A missing variable aborts with a clear message.
 
 ### Where real values come from
 

@@ -9,7 +9,7 @@
 # x25519 keypair per role and structurally-valid dummies for every other var.
 set -eu
 
-REPO="${REPO:-liupengliang/infra}"
+REPO="${REPO:-youruser/infra}"
 ROLES="client-legacy client server-legacy server-exit server-gate"
 DATED="$(date +%Y%m%d)"
 PUSH=0

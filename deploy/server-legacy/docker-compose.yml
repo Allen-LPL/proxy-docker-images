@@ -3,7 +3,7 @@
 #   docker compose up -d
 services:
   xray:
-    image: liupengliang/infra:server-legacy
+    image: ${IMAGE_REPO:-youruser/infra}:server-legacy
     container_name: proxy-server
     restart: unless-stopped
     user: "0"
