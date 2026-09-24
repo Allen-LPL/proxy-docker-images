@@ -1,0 +1,8 @@
+# Deploy-time secrets and runtime state — never commit.
+# Real values live in your own secret store; *.env.example (placeholders) stay tracked.
+deploy/**/.env
+deploy/**/logs/
+
+.DS_Store
+__pycache__/
+.pytest_cache/

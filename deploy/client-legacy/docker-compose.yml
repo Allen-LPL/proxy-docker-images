@@ -1,0 +1,15 @@
+# Legacy client. Usage:
+#   cp ../../docker/env/client-legacy.env.example .env   # then fill from vault
+#   docker compose up -d
+services:
+  xray:
+    image: liupengliang/infra:client-legacy
+    container_name: vm-dev-xray
+    restart: unless-stopped
+    user: "0"
+    env_file: .env
+    ports:
+      - "127.0.0.1:${SOCKS_PORT}:${SOCKS_PORT}"
+      - "127.0.0.1:${HTTP_PORT}:${HTTP_PORT}"
+    volumes:
+      - ./logs:/var/log/v2ray

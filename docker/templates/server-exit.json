@@ -1,0 +1,42 @@
+{
+  // New server, MS role: REALITY terminal inbound (:17443). Accepts the inner
+  // handshake tunneled through HK. Egress is freedom (this is the exit node).
+  //
+  // NOTE: rebuilt from the documented live structure. Verify field-by-field
+  // against the running MS /data/docker/xray-ai/config.json before a production
+  // cutover; `xray run -test` only proves structural validity.
+  "log": { "loglevel": "warning", "access": "/var/log/v2ray/access.log", "error": "/var/log/v2ray/error.log" },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "port": ${EXIT_PORT},
+      "protocol": "vless",
+      "settings": {
+        "clients": [ { "id": "${EXIT_CLIENT_UUID}", "flow": "xtls-rprx-vision", "email": "ai-user" } ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "show": false,
+          "dest": "${EXIT_DEST}",
+          "serverNames": [ "${EXIT_SERVERNAME}" ],
+          "privateKey": "${EXIT_PRIVATEKEY}",
+          "shortIds": [ "${EXIT_SHORTID}" ]
+        }
+      },
+      "tag": "ai-inner"
+    }
+  ],
+  "outbounds": [
+    { "protocol": "freedom", "settings": {}, "tag": "direct" },
+    { "protocol": "blackhole", "settings": {}, "tag": "block" }
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      { "type": "field", "ip": [ "geoip:private" ], "outboundTag": "block" }
+    ]
+  }
+}

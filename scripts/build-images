@@ -1,0 +1,77 @@
+#!/bin/sh
+# Build all role images, prove each one starts (render + `xray run -test`) with
+# throwaway secrets, and optionally push to the private DockerHub repo.
+#
+#   scripts/build-images            # build + smoke test only
+#   scripts/build-images --push     # build + smoke, then push (requires docker login)
+#
+# The smoke test never touches real credentials: it generates a throwaway
+# x25519 keypair per role and structurally-valid dummies for every other var.
+set -eu
+
+REPO="${REPO:-liupengliang/infra}"
+ROLES="client-legacy client server-legacy server-exit server-gate"
+DATED="$(date +%Y%m%d)"
+PUSH=0
+[ "${1:-}" = "--push" ] && PUSH=1
+
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
+DOCKER_DIR="$HERE/docker"
+
+# Optional: override the Xray base ref (e.g. a locally-cached ghcr.io digest,
+# or a different mirror). Unset -> the Dockerfile default (NJU mirror) applies.
+BASE_ARG=""
+[ -n "${XRAY_BASE:-}" ] && BASE_ARG="--build-arg XRAY_BASE=$XRAY_BASE"
+
+build() {
+    role="$1"
+    echo ">> build $REPO:$role"
+    # shellcheck disable=SC2086
+    docker build $BASE_ARG --build-arg ROLE="$role" \
+        -t "$REPO:$role" -t "$REPO:$role-$DATED" "$DOCKER_DIR"
+}
+
+# A structurally-valid dummy value for a variable name (smoke test only).
+dummy() {
+    case "$1" in
+        *PRIVATEKEY) printf '%s' "$2" ;;
+        *PUBLICKEY)  printf '%s' "$3" ;;
+        *SHORTID)    printf '0123456789abcdef' ;;
+        *UUID)       printf '11111111-1111-1111-1111-111111111111' ;;
+        *ALTERID)    printf '64' ;;
+        *HTTP_PORT)  printf '10809' ;;
+        *PORT)       printf '10808' ;;
+        *DEST)       printf 'www.example.com:443' ;;
+        *SERVERNAME) printf 'www.example.com' ;;
+        *ADDRESS)    printf '127.0.0.1' ;;
+        *)           printf 'x' ;;
+    esac
+}
+
+smoke() {
+    role="$1"
+    keys="$(docker run --rm --entrypoint xray "$REPO:$role" x25519)"
+    kpriv="$(printf '%s\n' "$keys" | awk 'NR==1{print $NF}')"
+    kpub="$(printf '%s\n' "$keys" | awk 'NR==2{print $NF}')"
+    envargs=""
+    while IFS= read -r v || [ -n "$v" ]; do
+        case "$v" in ""|\#*) continue ;; esac
+        envargs="$envargs -e $v=$(dummy "$v" "$kpriv" "$kpub")"
+    done < "$DOCKER_DIR/vars/$role.vars"
+    echo ">> smoke $REPO:$role"
+    # shellcheck disable=SC2086
+    docker run --rm -e SELFTEST=1 $envargs "$REPO:$role"
+}
+
+for r in $ROLES; do build "$r"; done
+for r in $ROLES; do smoke "$r"; done
+
+if [ "$PUSH" = 1 ]; then
+    for r in $ROLES; do
+        docker push "$REPO:$r"
+        docker push "$REPO:$r-$DATED"
+    done
+    echo ">> pushed all roles to $REPO (rolling + $DATED)"
+else
+    echo ">> build + smoke OK. Re-run with --push to publish."
+fi

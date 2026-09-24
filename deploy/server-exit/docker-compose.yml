@@ -1,0 +1,14 @@
+# New server, MS role (REALITY terminal). Usage:
+#   cp ../../docker/env/server-exit.env.example .env   # then fill from vault
+#   docker compose up -d
+services:
+  xray:
+    image: liupengliang/infra:server-exit
+    container_name: xray-ai
+    restart: unless-stopped
+    user: "0"
+    env_file: .env
+    ports:
+      - "${EXIT_PORT}:${EXIT_PORT}"
+    volumes:
+      - ./logs:/var/log/v2ray

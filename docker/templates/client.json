@@ -1,0 +1,139 @@
+{
+  // New client: Claude/Anthropic -> MS-AI double-layer REALITY chain (proxy-ai),
+  // ChatGPT/OpenAI + default -> LA legacy VMess (proxy). Rendered from .env.
+  "dns": {
+    "hosts": { "domain:googleapis.cn": "googleapis.com" },
+    "servers": [ "1.1.1.1" ]
+  },
+  "log": {
+    "loglevel": "warning",
+    "access": "/var/log/v2ray/access.log",
+    "error": "/var/log/v2ray/error.log"
+  },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "port": ${SOCKS_PORT},
+      "protocol": "socks",
+      "settings": { "auth": "noauth", "udp": true },
+      "sniffing": { "destOverride": [ "http", "tls" ], "enabled": true },
+      "tag": "socks"
+    },
+    {
+      "listen": "0.0.0.0",
+      "port": ${HTTP_PORT},
+      "protocol": "http",
+      "settings": { "userLevel": 0 },
+      "tag": "http"
+    }
+  ],
+  "outbounds": [
+    {
+      // Default exit: LA legacy VMess.
+      "mux": { "concurrency": -1, "enabled": false },
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "${LA_ADDRESS}",
+            "port": ${LA_PORT},
+            "users": [ { "alterId": ${LA_ALTERID}, "id": "${LA_UUID}", "security": "none" } ]
+          }
+        ]
+      },
+      "streamSettings": { "tcpSettings": { "header": { "type": "http" } } },
+      "tag": "proxy"
+    },
+    {
+      // AI exit inner layer: client -> HK:443 (hk-gate) -> MS:17443 (this REALITY handshake).
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "${AI_ADDRESS}",
+            "port": ${AI_PORT},
+            "users": [ { "id": "${AI_UUID}", "flow": "xtls-rprx-vision", "encryption": "none" } ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "${AI_SERVERNAME}",
+          "fingerprint": "chrome",
+          "publicKey": "${AI_PUBLICKEY}",
+          "shortId": "${AI_SHORTID}"
+        },
+        "sockopt": { "dialerProxy": "hk-gate" }
+      },
+      "tag": "proxy-ai"
+    },
+    {
+      // AI exit outer layer: HK gate. Not referenced by routing; only dialed by proxy-ai.
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "${HK_ADDRESS}",
+            "port": ${HK_PORT},
+            "users": [ { "id": "${HK_UUID}", "flow": "xtls-rprx-vision", "encryption": "none" } ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "${HK_SERVERNAME}",
+          "fingerprint": "chrome",
+          "publicKey": "${HK_PUBLICKEY}",
+          "shortId": "${HK_SHORTID}"
+        }
+      },
+      "tag": "hk-gate"
+    },
+    {
+      // Backup exit: MS legacy VMess. Retained for manual emergency; no routing rule references it.
+      "mux": { "concurrency": -1, "enabled": false },
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "${MS_ADDRESS}",
+            "port": ${MS_PORT},
+            "users": [ { "alterId": ${MS_ALTERID}, "id": "${MS_UUID}", "security": "auto" } ]
+          }
+        ]
+      },
+      "streamSettings": { "tcpSettings": { "header": { "type": "http" } } },
+      "tag": "proxy-ms"
+    },
+    { "protocol": "freedom", "settings": {}, "tag": "direct" },
+    { "protocol": "blackhole", "settings": { "response": { "type": "http" } }, "tag": "block" }
+  ],
+  "policy": {
+    "levels": { "8": { "connIdle": 300, "downlinkOnly": 1, "handshake": 4, "uplinkOnly": 1 } },
+    "system": { "statsOutboundUplink": true, "statsOutboundDownlink": true }
+  },
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      { "type": "field", "ip": [ "geoip:private" ], "outboundTag": "direct" },
+      { "type": "field", "domain": [ "smtp.feishu.cn" ], "outboundTag": "direct" },
+      {
+        "type": "field",
+        "domain": [ "domain:anthropic.com", "domain:claude.ai", "domain:claude.com", "domain:claudeusercontent.com", "anthropic" ],
+        "outboundTag": "proxy-ai"
+      },
+      {
+        "type": "field",
+        "domain": [ "domain:openai.com", "domain:chatgpt.com", "domain:oaistatic.com", "domain:oaiusercontent.com", "domain:sora.com", "openai" ],
+        "outboundTag": "proxy"
+      },
+      { "type": "field", "domain": [ "geosite:cn" ], "outboundTag": "direct" },
+      { "type": "field", "network": "tcp,udp", "outboundTag": "proxy" }
+    ]
+  },
+  "stats": {}
+}

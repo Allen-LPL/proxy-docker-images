@@ -1,0 +1,14 @@
+# Legacy server (VMess inbound). Usage:
+#   cp ../../docker/env/server-legacy.env.example .env   # then fill from vault
+#   docker compose up -d
+services:
+  xray:
+    image: liupengliang/infra:server-legacy
+    container_name: proxy-server
+    restart: unless-stopped
+    user: "0"
+    env_file: .env
+    ports:
+      - "${LISTEN_PORT}:${LISTEN_PORT}"
+    volumes:
+      - ./logs:/var/log/v2ray

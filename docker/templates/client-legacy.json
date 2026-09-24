@@ -1,0 +1,48 @@
+{
+  // Legacy client (v2fly era): single global VMess exit, no split routing.
+  "log": { "loglevel": "warning", "access": "/var/log/v2ray/access.log", "error": "/var/log/v2ray/error.log" },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "port": ${SOCKS_PORT},
+      "protocol": "socks",
+      "settings": { "auth": "noauth", "udp": true },
+      "sniffing": { "destOverride": [ "http", "tls" ], "enabled": true },
+      "tag": "socks"
+    },
+    {
+      "listen": "0.0.0.0",
+      "port": ${HTTP_PORT},
+      "protocol": "http",
+      "settings": { "userLevel": 0 },
+      "tag": "http"
+    }
+  ],
+  "outbounds": [
+    {
+      "mux": { "concurrency": -1, "enabled": false },
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [
+          {
+            "address": "${LA_ADDRESS}",
+            "port": ${LA_PORT},
+            "users": [ { "alterId": ${LA_ALTERID}, "id": "${LA_UUID}", "security": "none" } ]
+          }
+        ]
+      },
+      "streamSettings": { "tcpSettings": { "header": { "type": "http" } } },
+      "tag": "proxy"
+    },
+    { "protocol": "freedom", "settings": {}, "tag": "direct" },
+    { "protocol": "blackhole", "settings": { "response": { "type": "http" } }, "tag": "block" }
+  ],
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      { "type": "field", "ip": [ "geoip:private" ], "outboundTag": "direct" },
+      { "type": "field", "domain": [ "geosite:cn" ], "outboundTag": "direct" },
+      { "type": "field", "network": "tcp,udp", "outboundTag": "proxy" }
+    ]
+  }
+}

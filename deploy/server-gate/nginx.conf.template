@@ -1,0 +1,21 @@
+# Rendered by the nginx service entrypoint (envsubst). Stream-level SNI split:
+# the REALITY serverName goes to the local Xray gate; everything else (probes,
+# scanners) goes to the decoy upstream so the port looks like an ordinary site.
+worker_processes auto;
+events { worker_connections 1024; }
+
+stream {
+    map $ssl_preread_server_name $upstream {
+        ${GATE_SERVERNAME}  gate;
+        default             decoy;
+    }
+
+    upstream gate  { server 127.0.0.1:${GATE_PORT}; }
+    upstream decoy { server ${DECOY_UPSTREAM}; }
+
+    server {
+        listen 443;
+        ssl_preread on;
+        proxy_pass $upstream;
+    }
+}

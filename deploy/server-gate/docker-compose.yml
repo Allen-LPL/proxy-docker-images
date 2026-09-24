@@ -1,0 +1,37 @@
+# New server, HK role: nginx SNI splitter (:443) in front of the REALITY gate
+# (127.0.0.1:GATE_PORT). Usage:
+#   cp ../../docker/env/server-gate.env.example .env   # then fill from vault
+#   docker compose up -d
+#
+# Host networking lets nginx (:443) reach the gate on 127.0.0.1:GATE_PORT and
+# keeps the gate off any public interface, matching the live HK topology.
+services:
+  xray:
+    image: liupengliang/infra:server-gate
+    container_name: hkgate-xray
+    restart: unless-stopped
+    user: "0"
+    network_mode: host
+    env_file: .env
+    volumes:
+      - ./logs:/var/log/v2ray
+
+  nginx:
+    # Pin to a digest after first pull; version tag avoids :latest per policy.
+    image: nginx:1.27.2-alpine
+    container_name: hkgate-nginx
+    restart: unless-stopped
+    depends_on:
+      - xray
+    network_mode: host
+    env_file: .env
+    volumes:
+      - ./nginx.conf.template:/etc/nginx/nginx.conf.template:ro
+    # nginx ships envsubst; render the top-level stream config, then run.
+    entrypoint:
+      - sh
+      - -c
+      - >
+        envsubst '$$GATE_PORT $$GATE_SERVERNAME $$DECOY_UPSTREAM'
+        < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+        && exec nginx -g 'daemon off;'
